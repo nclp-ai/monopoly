@@ -72,16 +72,38 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2rem;
-            font-weight: bold;
-            color: #1e1b4b;
             box-shadow: inset 0 0 10px rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.3);
+            padding: 8px;
+        }
+
+        /* Dice Dots Grid Layout */
+        .dice-dots-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%;
+            height: 100%;
+            gap: 2px;
+        }
+        .dice-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #1e1b4b;
+            border-radius: 50%;
+            margin: auto;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* Monopoly style property card header */
+        .property-header {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
         }
 
         /* Pulse glowing effect */
         .glow-active {
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.9);
             border-color: #f59e0b !important;
+            transform: scale(1.03);
         }
 
         .chair-card {
@@ -128,6 +150,19 @@
 
             <!-- Global Action Controls -->
             <div class="flex items-center gap-2 flex-wrap justify-center">
+                <!-- Track Length Selector -->
+                <div class="flex items-center bg-indigo-900/80 border border-indigo-700 rounded-lg p-1 text-xs text-indigo-200">
+                    <span class="px-2 font-bold text-amber-300"><i class="fa-solid fa-map-location-dot"></i> 格數:</span>
+                    <select id="trackLengthSelect" onchange="changeTrackLength(this.value)" class="bg-indigo-950 text-amber-400 font-extrabold rounded px-2 py-1 outline-none border border-indigo-700 cursor-pointer">
+                        <option value="16">16 格</option>
+                        <option value="20">20 格</option>
+                        <option value="24">24 格</option>
+                    </select>
+                </div>
+
+                <button onclick="openTeamManageModal()" class="px-3 py-2 bg-gradient-to-r from-indigo-700 to-purple-700 hover:from-indigo-600 hover:to-purple-600 text-amber-300 rounded-lg border border-purple-500/50 text-sm flex items-center gap-2 transition shadow">
+                    <i class="fa-solid fa-users-gear"></i> 隊伍設定 (2-10隊)
+                </button>
                 <button onclick="toggleAudio()" id="audioBtn" class="px-3 py-2 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 rounded-lg border border-indigo-700 text-sm flex items-center gap-2 transition">
                     <i class="fa-solid fa-volume-high" id="audioIcon"></i> <span id="audioText">音效 ON</span>
                 </button>
@@ -173,13 +208,13 @@
                             </div>
                             <div>
                                 <h3 id="currentTeamName" class="text-lg font-black text-white">信心隊</h3>
-                                <p id="currentTeamStatus" class="text-xs text-amber-300">請準備擲骰子 (最高4點)</p>
+                                <p id="currentTeamStatus" class="text-xs text-amber-300">請準備擲骰子 (1-4點)</p>
                             </div>
                         </div>
                         <div class="text-right">
                             <span class="text-xs text-gray-400">當前位置</span>
                             <div id="currentTeamChairLabel" class="text-sm font-bold text-amber-400">
-                                椅子 #0 (創世記)
+                                格子 #0 (創世記)
                             </div>
                         </div>
                     </div>
@@ -198,12 +233,15 @@
                         </button>
                     </div>
 
-                    <!-- DICE ROLLER AREA (1-4 Max) -->
+                    <!-- DICE ROLLER AREA WITH DICE DOTS (1-4 Max) -->
                     <div class="flex items-center justify-around my-2 p-3 bg-indigo-950/60 rounded-xl border border-indigo-800">
-                        <!-- 3D Dice Visual (Max 4) -->
+                        <!-- 3D Dice Visual with Dot Pattern -->
                         <div class="dice-container">
                             <div id="dice" class="dice">
-                                <div class="dice-face" style="transform: translateZ(35px);">1</div>
+                                <div class="dice-face" style="transform: translateZ(35px);">
+                                    <!-- Rendered via JS renderDiceDots -->
+                                    <div id="diceFaceContent" class="dice-dots-grid"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -218,10 +256,14 @@
                         </div>
                     </div>
 
-                    <!-- LIVE INSTRUCTION BANNER FOR RUNNER -->
-                    <div id="runnerInstruction" class="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-center hidden animate-bounce">
-                        <p class="text-xs text-amber-300 font-bold">📢 真人棋子指示：</p>
-                        <p id="runnerInstructionText" class="text-sm text-white font-extrabold mt-0.5">請步行至地面 <span class="text-amber-400 underline decoration-wavy">椅子 #--</span></p>
+                    <!-- LIVE INSTRUCTION BANNER FOR STAGE CHALLENGE -->
+                    <div id="runnerInstruction" class="mt-3 p-3 bg-amber-500/20 border border-amber-400 rounded-xl text-center hidden animate-bounce shadow-lg">
+                        <p class="text-xs text-amber-300 font-bold flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-bullhorn"></i> 中央舞台挑戰指示：
+                        </p>
+                        <p id="runnerInstructionText" class="text-sm text-white font-extrabold mt-0.5">
+                            請 <span id="stageTeamName" class="text-amber-300 underline font-black">--</span> 組員前往中央位置進行挑戰！
+                        </p>
                     </div>
                 </div>
 
@@ -229,7 +271,7 @@
                 <div class="bg-indigo-900/60 border border-indigo-800 rounded-2xl p-4 backdrop-blur shadow-xl flex-1 flex flex-col">
                     <div class="flex justify-between items-center mb-3">
                         <h2 class="text-sm font-bold text-indigo-200 flex items-center gap-2">
-                            <i class="fa-solid fa-trophy text-amber-400"></i> 各組得分與卡牌
+                            <i class="fa-solid fa-trophy text-amber-400"></i> 各組得分與狀態
                         </h2>
                         <button onclick="openScoreAdjustModal()" class="text-xs text-amber-400 hover:underline">
                             <i class="fa-solid fa-sliders"></i> 手動調整分
@@ -248,52 +290,52 @@
                         <span class="text-[10px] text-gray-500">即時紀錄</span>
                     </div>
                     <div id="gameLog" class="text-xs space-y-1.5 overflow-y-auto custom-scrollbar flex-1 pr-1 text-gray-300">
-                        <p class="text-indigo-400 italic">🎮 歡迎來到以西結團大富翁 2.0！每組擁有 1 次即時隨機盲抽卡牌機會。</p>
+                        <p class="text-indigo-400 italic">🎮 歡迎來到以西結團大富翁 2.0！可點擊右上角自訂隊名與賽道格數。</p>
                     </div>
                 </div>
 
             </div>
 
-            <!-- RIGHT COLUMN: CONNECTED PATH BOARD VISUALIZER (8 COLS) -->
+            <!-- RIGHT COLUMN: COLORFUL MONOPOLY PATH BOARD VISUALIZER (8 COLS) -->
             <div class="lg:col-span-8 bg-indigo-900/60 border border-indigo-800 rounded-2xl p-4 md:p-5 backdrop-blur shadow-xl flex flex-col justify-between relative overflow-hidden">
                 
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 pb-3 border-b border-indigo-800">
                     <div>
-                        <h2 class="text-lg font-black text-white flex items-center gap-2">
-                            <i class="fa-solid fa-route text-amber-400"></i> 實體賽道路徑圖 (Connected Chair Track)
+                        <h2 class="text-xl font-black text-amber-300 flex items-center gap-2">
+                            <i class="fa-solid fa-map text-amber-400"></i> 大富翁棋盤賽道路徑圖
                         </h2>
-                        <p class="text-xs text-indigo-300">貫通地面椅子 #0 至 #15 的實體連結賽道</p>
+                        <p class="text-xs text-indigo-300">繽紛聖經大富翁 – 全盤共 <span id="currentTrackCountText" class="text-amber-300 font-bold">16</span> 個連貫站點</p>
                     </div>
                     <!-- Color Category Legend -->
-                    <div class="flex flex-wrap gap-2 text-[11px]">
-                        <span class="px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 border border-blue-500/40">📖 問答</span>
-                        <span class="px-2 py-0.5 rounded bg-emerald-600/30 text-emerald-300 border border-emerald-500/40">🎭 默契</span>
-                        <span class="px-2 py-0.5 rounded bg-amber-600/30 text-amber-300 border border-amber-500/40">💖 分享</span>
-                        <span class="px-2 py-0.5 rounded bg-rose-600/30 text-rose-300 border border-rose-500/40">⚡ 機遇</span>
+                    <div class="flex flex-wrap gap-2 text-xs font-bold">
+                        <span class="px-2.5 py-1 rounded-lg bg-blue-600/40 text-blue-200 border border-blue-400/50 shadow-sm flex items-center gap-1"><i class="fa-solid fa-book-bible"></i> 聖經問答</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-600/40 text-emerald-200 border border-emerald-400/50 shadow-sm flex items-center gap-1"><i class="fa-solid fa-masks-theater"></i> 默契肢體</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-amber-600/40 text-amber-200 border border-amber-400/50 shadow-sm flex items-center gap-1"><i class="fa-solid fa-comments"></i> 生命分享</span>
+                        <span class="px-2.5 py-1 rounded-lg bg-rose-600/40 text-rose-200 border border-rose-400/50 shadow-sm flex items-center gap-1"><i class="fa-solid fa-bolt"></i> 機遇考驗</span>
                     </div>
                 </div>
 
                 <!-- PATH CONNECTED BOARD CONTAINER -->
-                <div class="relative w-full min-h-[420px] bg-slate-950/70 rounded-2xl p-4 border border-indigo-800 flex items-center justify-center overflow-auto custom-scrollbar">
+                <div class="relative w-full min-h-[460px] bg-slate-950/80 rounded-2xl p-4 border-2 border-indigo-700/80 flex items-center justify-center overflow-auto custom-scrollbar shadow-2xl">
                     
                     <!-- SVG Path Lines Layer -->
-                    <svg id="boardPathSvg" class="absolute inset-0 w-full h-full pointer-events-none" style="min-width: 600px; min-height: 400px;"></svg>
+                    <svg id="boardPathSvg" class="absolute inset-0 w-full h-full pointer-events-none" style="min-width: 600px; min-height: 420px;"></svg>
 
                     <!-- Interactive Nodes Container -->
-                    <div id="pathNodesContainer" class="relative w-full h-full min-w-[600px] min-h-[400px] grid grid-cols-4 grid-rows-4 gap-4 p-2">
+                    <div id="pathNodesContainer" class="relative w-full h-full min-w-[600px] min-h-[420px] p-2">
                         <!-- Dynamic Path Nodes rendered via JS -->
                     </div>
 
                 </div>
 
                 <!-- MAP BOTTOM FOOTER INFO -->
-                <div class="mt-3 pt-3 border-t border-indigo-800/80 flex flex-col sm:flex-row justify-between items-center text-xs text-indigo-300 gap-2">
+                <div class="mt-3 pt-3 border-t border-indigo-800/80 flex flex-col sm:flex-row justify-between items-center text-xs text-indigo-200 gap-2 font-medium">
                     <div class="flex items-center gap-2">
-                        <i class="fa-solid fa-circle-info text-amber-400"></i>
-                        <span>骰子點數最大為 4；點擊任何椅子可預覽任務題目</span>
+                        <i class="fa-solid fa-lightbulb text-amber-400 text-sm"></i>
+                        <span>骰子點數為 1 至 4 點；點擊任何大富翁格子可預覽挑戰題目！</span>
                     </div>
-                    <div class="font-mono text-amber-400 font-semibold">
-                        賽道全長: 16 個連貫站點 (0-15)
+                    <div class="font-mono text-amber-400 font-bold bg-indigo-950 px-3 py-1 rounded-full border border-indigo-800">
+                        賽道總計: <span id="footerTrackTotal">16</span> 個精彩地圖站點 (0 - <span id="footerTrackMax">15</span>)
                     </div>
                 </div>
 
@@ -302,44 +344,26 @@
         </div>
     </div>
 
-    <!-- MODAL 1: TASK & QUESTION MODAL -->
-    <div id="cardModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-indigo-950 border-2 border-amber-500 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative overflow-hidden">
-            
-            <div id="modalCategoryBadge" class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold text-white mb-3">
-                <i class="fa-solid fa-star"></i> <span id="modalCategoryName">關卡類別</span>
+    <!-- MODAL: TEAM MANAGEMENT (EDIT NAMES & ADD/REMOVE 2-10 TEAMS) -->
+    <div id="teamManageModal" class="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-indigo-950 border-2 border-amber-500 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-xl font-black text-amber-400 mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-users-gear"></i> 隊伍管理與名字自訂 (2 - 10 隊)
+            </h3>
+            <p class="text-xs text-indigo-200 mb-4">您可以更改各隊隊名，或新增/刪除隊伍 (最少 2 隊，最多 10 隊)：</p>
+
+            <div id="teamManageList" class="space-y-2.5 max-h-80 overflow-y-auto custom-scrollbar pr-1 mb-4">
+                <!-- Dynamically injected via JS -->
             </div>
 
-            <div class="flex justify-between items-start mb-2">
-                <h3 id="modalTaskTitle" class="text-xl font-black text-amber-300">任務名稱</h3>
-                <span id="modalChairNum" class="text-xs bg-indigo-900 border border-indigo-700 px-2 py-1 rounded text-amber-400 font-mono">#--</span>
-            </div>
-
-            <p id="modalTaskBody" class="text-sm text-indigo-100 leading-relaxed my-3 bg-indigo-900/50 p-3.5 rounded-xl border border-indigo-800">
-                任務詳細說明...
-            </p>
-
-            <!-- Quiz Options Container -->
-            <div id="quizOptionsContainer" class="grid grid-cols-1 gap-2 my-3 hidden"></div>
-
-            <!-- Timer Area -->
-            <div id="timerContainer" class="my-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex justify-between items-center hidden">
-                <div class="text-xs text-amber-300 font-bold">
-                    <i class="fa-solid fa-stopwatch"></i> 限時進行中：
-                </div>
-                <div id="timerDisplay" class="text-2xl font-mono font-black text-amber-400">00:30</div>
+            <div class="flex justify-between items-center border-t border-indigo-800/80 pt-4">
+                <button onclick="addTeamInManage()" id="addTeamBtn" class="px-4 py-2 bg-indigo-800 hover:bg-indigo-700 text-amber-300 border border-indigo-600 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-user-plus"></i> 新增隊伍
+                </button>
                 <div class="flex gap-2">
-                    <button onclick="startTimer()" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-indigo-950 font-bold rounded text-xs">開始</button>
-                    <button onclick="pauseTimer()" class="px-3 py-1 bg-indigo-800 hover:bg-indigo-700 text-indigo-200 rounded text-xs">暫停</button>
-                </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex justify-between items-center border-t border-indigo-800/80 pt-4 mt-4">
-                <span id="modalRewardText" class="text-xs font-bold text-emerald-400">完成此任務獎勵: +20 分</span>
-                <div class="flex gap-2">
-                    <button onclick="resolveTask(false)" class="px-4 py-2 bg-rose-900/80 hover:bg-rose-800 text-rose-200 font-bold rounded-xl text-xs transition">未完成 / 答錯</button>
-                    <button onclick="resolveTask(true)" class="px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold rounded-xl text-xs shadow-lg transition">完成任務 / 答對 (+分)</button>
+                    <button onclick="closeTeamManageModal()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-indigo-950 font-black rounded-xl text-xs shadow hover:from-amber-400 hover:to-yellow-400 transition">
+                        儲存變更並關閉
+                    </button>
                 </div>
             </div>
         </div>
@@ -434,7 +458,7 @@
     </div>
 
     <script>
-        // AUDIO SYNTHESIZER (Web Audio API - No external files required)
+        // AUDIO SYNTHESIZER
         let audioEnabled = true;
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
@@ -469,8 +493,8 @@
                 osc.stop(now + 0.15);
             } else if (type === 'land') {
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(523.25, now); // C5
-                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
                 gain.gain.setValueAtTime(0.2, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
                 osc.start(now);
@@ -508,7 +532,7 @@
             document.getElementById('audioText').innerText = audioEnabled ? '音效 ON' : '音效 OFF';
         }
 
-        // PREDEFINED SPECIAL CARDS POOL (4 Options for Random Draw)
+        // PREDEFINED SPECIAL CARDS POOL
         const SPECIAL_CARDS_POOL = [
             { id: 'SPECIFY_NUM', name: '🎯 指定數字', icon: 'fa-bullseye', desc: '可直接指定本次擲骰移動 1 至 4 步' },
             { id: 'DOUBLE_STEP', name: '✖️ 數字 × 2', icon: 'fa-angles-right', desc: '將本次擲出之骰子點數乘雙 (x2) 前進' },
@@ -516,199 +540,227 @@
             { id: 'FREEZE_TARGET', name: '❄️ 指定組別停一次', icon: 'fa-snowflake', desc: '凍結指定的目標隊伍，使其暫停一個回合' }
         ];
 
-        // TEAMS DEFINITION
-        let teams = [
-            { id: 0, name: '信心隊', color: '#ef4444', position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
-            { id: 1, name: '盼望隊', color: '#3b82f6', position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
-            { id: 2, name: '愛心隊', color: '#10b981', position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
-            { id: 3, name: '喜樂隊', color: '#f59e0b', position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false }
+        // PRESET COLOR PALETTE FOR UP TO 10 TEAMS
+        const TEAM_COLORS = [
+            '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
+            '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1'
         ];
 
+        // TEAMS DEFINITION (DEFAULT 4 TEAMS, EDITABLE UP TO 10)
+        let teams = [
+            { id: 0, name: '信心隊', color: TEAM_COLORS[0], position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
+            { id: 1, name: '盼望隊', color: TEAM_COLORS[1], position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
+            { id: 2, name: '愛心隊', color: TEAM_COLORS[2], position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false },
+            { id: 3, name: '喜樂隊', color: TEAM_COLORS[3], position: 0, score: 0, specialCard: null, cardUsed: false, isFrozen: false, isReversed: false }
+        ];
+
+        let totalTrackTiles = 16; // 16, 20, or 24
         let currentTeamIndex = 0;
         let roundCount = 1;
         let isRolling = false;
         let pendingRewardPoints = 0;
         let timerInterval = null;
         let timerSeconds = 30;
-        let activeCardModifier = null; // Stored modifier for current turn roll
-        let pendingDrawnCard = null; // Temporary holds drawn card during modal reveal
+        let activeCardModifier = null;
+        let pendingDrawnCard = null;
 
-        // CHAIR BOARD DATA (16 Chairs total, matching serpent path layout)
-        const boardChairs = [
-            { id: 0, gridIndex: 0, type: 'start', name: '起點: 創世記', category: '起點', color: 'bg-indigo-800', icon: 'fa-flag-checkered', task: null },
-            { 
-                id: 1, gridIndex: 1, type: 'quiz', name: '椅子 #1', category: '聖經問答', color: 'bg-blue-600', icon: 'fa-book-bible',
-                task: {
-                    title: '摩西五經排序考驗',
-                    desc: '請按順序說出舊約聖經中「摩西五經」的其中三個書卷名稱。',
-                    reward: 20,
-                    options: ['創世記、出埃及記、利未記', '馬太效應、創世記、民數記', '詩篇、箴言、傳道書'],
-                    correct: 0
-                }
+        // MASTER TASK POOL FOR UP TO 24 TILES WITH RICH MONOPOLY THEMED COLOR BANDS
+        const MASTER_TASKS_POOL = [
+            { id: 0, type: 'start', name: '起點: 創世記', category: '起點', colorBand: 'from-amber-400 to-yellow-600', color: 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950', icon: 'fa-flag-checkered', task: null },
+            { id: 1, type: 'quiz', name: '聖經問答站', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '摩西五經排序考驗', desc: '請按順序說出舊約聖經中「摩西五經」的其中三個書卷名稱。', reward: 20, options: ['創世記、出埃及記、利未記', '馬太福音、創世記、民數記', '詩篇、箴言、傳道書'], correct: 0 }
             },
-            { 
-                id: 2, gridIndex: 2, type: 'action', name: '椅子 #2', category: '默契肢體', color: 'bg-emerald-600', icon: 'fa-masks-theater',
-                task: {
-                    title: '聖經故事大比拼：大衛擊退歌利亞',
-                    desc: '請由兩位團友（夫婦或非夫婦）合作，在不說話情況下用肢體演繹「大衛用機弦甩石擊退歌利亞」，由隊友在 30 秒內猜出。',
-                    reward: 30,
-                    hasTimer: true,
-                    timerVal: 30
-                }
+            { id: 2, type: 'action', name: '默契演繹館', category: '默契肢體', colorBand: 'from-emerald-500 to-teal-600', color: 'bg-emerald-600 text-white', icon: 'fa-masks-theater',
+                task: { title: '聖經故事：大衛擊退歌利亞', desc: '請派兩位組員前往中央舞台，在不說話情況下用肢體演繹「大衛用機弦甩石擊退歌利亞」，由隊友在 30 秒內猜出。', reward: 30, hasTimer: true, timerVal: 30 }
             },
-            { 
-                id: 3, gridIndex: 3, type: 'share', name: '椅子 #3', category: '生命分享', color: 'bg-amber-600', icon: 'fa-comments',
-                task: {
-                    title: '金句力量分享',
-                    desc: '請組內一位團友分享一句最為鼓勵你或對你影響深刻的聖經金句，並用一句話說明原因。',
-                    reward: 25
-                }
+            { id: 3, type: 'share', name: '生命金句角', category: '生命分享', colorBand: 'from-amber-500 to-orange-600', color: 'bg-amber-600 text-white', icon: 'fa-comments',
+                task: { title: '金句力量分享', desc: '請組內一位團友分享一句最為鼓勵你或對你影響深刻的聖經金句，並說明原因。', reward: 25 }
             },
-            { 
-                id: 4, gridIndex: 7, type: 'event', name: '椅子 #4', category: '機遇考驗', color: 'bg-rose-600', icon: 'fa-bolt',
-                task: {
-                    title: '過紅海奇蹟',
-                    desc: '全組團友需齊聲合唱一首詩歌（如《讚美之泉》或《主是我力量》）副歌兩句，順利過紅海！',
-                    reward: 20
-                }
+            { id: 4, type: 'event', name: '紅海機遇站', category: '機遇考驗', colorBand: 'from-rose-500 to-red-600', color: 'bg-rose-600 text-white', icon: 'fa-bolt',
+                task: { title: '過紅海奇蹟歌唱', desc: '全組團友需齊聲合唱一首詩歌（如《讚美之泉》或《主是我力量》）副歌兩句，順利過紅海！', reward: 20 }
             },
-            { 
-                id: 5, gridIndex: 6, type: 'rest', name: '椅子 #5', category: '曠野休息站', color: 'bg-teal-700', icon: 'fa-campground',
-                task: {
-                    title: '曠野中的恩典休息站',
-                    desc: '在曠野得到活水補給！全組一起拍掌說聲「主恩夠用」，直接獲得安息獎勵！',
-                    reward: 15
-                }
+            { id: 5, type: 'rest', name: '曠野休息站', category: '恩典休息', colorBand: 'from-teal-500 to-cyan-600', color: 'bg-teal-700 text-white', icon: 'fa-campground',
+                task: { title: '曠野中的恩典補給', desc: '在曠野得到活水補給！全組一起拍掌說聲「主恩夠用」，直接獲得安息獎勵！', reward: 15 }
             },
-            { 
-                id: 6, gridIndex: 5, type: 'quiz', name: '椅子 #6', category: '聖經問答', color: 'bg-blue-600', icon: 'fa-book-bible',
-                task: {
-                    title: '五餅二魚數量題',
-                    desc: '耶穌用「五餅二魚」給五千人吃飽後，剩下的碎屑裝滿了多少個籃子？',
-                    reward: 20,
-                    options: ['7 個籃子', '12 個籃子', '40 個籃子'],
-                    correct: 1
-                }
+            { id: 6, type: 'quiz', name: '奇蹟算術卡', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '五餅二魚數量題', desc: '耶穌用「五餅二魚」給五千人吃飽後，剩下的碎屑裝滿了多少個籃子？', reward: 20, options: ['7 個籃子', '12 個籃子', '40 個籃子'], correct: 1 }
             },
-            { 
-                id: 7, gridIndex: 4, type: 'action', name: '椅子 #7', category: '默契肢體', color: 'bg-emerald-600', icon: 'fa-masks-theater',
-                task: {
-                    title: '經典畫卷：最後的晚餐',
-                    desc: '請全組成員（包括現場支援團友）一起用肢體擺出「最後的晚餐」情境造型，維持姿勢 5 秒！',
-                    reward: 30
-                }
+            { id: 7, type: 'action', name: '聖經名畫展', category: '默契肢體', colorBand: 'from-emerald-500 to-teal-600', color: 'bg-emerald-600 text-white', icon: 'fa-masks-theater',
+                task: { title: '經典畫卷：最後的晚餐', desc: '請組員前往中央舞台擺出「最後的晚餐」情境定格造型，維持姿勢 5 秒！', reward: 30 }
             },
-            { 
-                id: 8, gridIndex: 8, type: 'share', name: '椅子 #8', category: '生命分享', color: 'bg-amber-600', icon: 'fa-comments',
-                task: {
-                    title: '感恩時刻交流',
-                    desc: '請組內一位團友說出最近一個月內值得向神感恩的一件事（如家庭、工作或健康）。',
-                    reward: 25
-                }
+            { id: 8, type: 'share', name: '感恩交流室', category: '生命分享', colorBand: 'from-amber-500 to-orange-600', color: 'bg-amber-600 text-white', icon: 'fa-comments',
+                task: { title: '感恩時刻交流', desc: '請組內一位團友說出最近一個月內值得向神感恩的一件事（如家庭、工作或健康）。', reward: 25 }
             },
-            { 
-                id: 9, gridIndex: 9, type: 'event', name: '椅子 #9', category: '機遇考驗', color: 'bg-rose-600', icon: 'fa-bolt',
-                task: {
-                    title: '愛心相助分享',
-                    desc: '主內一家！你們可以選擇將本組 10 分贈予目前分數最低的組別。若選擇贈送，將獲額外「愛心獎賞」！',
-                    reward: 20
-                }
+            { id: 9, type: 'event', name: '愛心分享卡', category: '機遇考驗', colorBand: 'from-rose-500 to-red-600', color: 'bg-rose-600 text-white', icon: 'fa-bolt',
+                task: { title: '愛心相助分享', desc: '主內一家！你們可以選擇將本組 10 分贈予目前分數最低的組別。若選擇贈送，將獲額外「愛心獎賞」！', reward: 20 }
             },
-            { 
-                id: 10, gridIndex: 10, type: 'quiz', name: '椅子 #10', category: '聖經問答', color: 'bg-blue-600', icon: 'fa-book-bible',
-                task: {
-                    title: '大魚肚中的先知',
-                    desc: '聖經中哪一位先知曾不順服神，被大魚吞入腹中三日三夜後悔改？',
-                    reward: 20,
-                    options: ['以利亞', '約拿', '但以理'],
-                    correct: 1
-                }
+            { id: 10, type: 'quiz', name: '先知試煉場', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '大魚肚中的先知', desc: '聖經中哪一位先知曾不順服神，被大魚吞入腹中三日三夜後悔改？', reward: 20, options: ['以利亞', '約拿', '但以理'], correct: 1 }
             },
-            { 
-                id: 11, gridIndex: 11, type: 'action', name: '椅子 #11', category: '默契肢體', color: 'bg-emerald-600', icon: 'fa-masks-theater',
-                task: {
-                    title: '肢體排字：諾亞方舟',
-                    desc: '兩位團友合作用肢體形狀拼出「諾亞方舟」或「和平鴿」的造型，由組員快速猜出！',
-                    reward: 30,
-                    hasTimer: true,
-                    timerVal: 30
-                }
+            { id: 11, type: 'action', name: '肢體排字閣', category: '默契肢體', colorBand: 'from-emerald-500 to-teal-600', color: 'bg-emerald-600 text-white', icon: 'fa-masks-theater',
+                task: { title: '肢體造型：諾亞方舟', desc: '兩位團友前往中央舞台用肢體拼出「諾亞方舟」造型，由組員快速猜出！', reward: 30, hasTimer: true, timerVal: 30 }
             },
-            { 
-                id: 12, gridIndex: 15, type: 'share', name: '椅子 #12', category: '生命分享', color: 'bg-amber-600', icon: 'fa-comments',
-                task: {
-                    title: '肢體祝福禱告',
-                    desc: '請全組團友手拉手，由一位團友代表為身旁一位團友作一個簡單的 10 秒祝福禱告。',
-                    reward: 25
-                }
+            { id: 12, type: 'share', name: '祝福禱告室', category: '生命分享', colorBand: 'from-amber-500 to-orange-600', color: 'bg-amber-600 text-white', icon: 'fa-comments',
+                task: { title: '肢體祝福禱告', desc: '請全組團友手拉手，由一位團友代表為身旁一位團友作一個簡單的 10 秒祝福禱告。', reward: 25 }
             },
-            { 
-                id: 13, gridIndex: 14, type: 'event', name: '椅子 #13', category: '機遇考驗', color: 'bg-rose-600', icon: 'fa-bolt',
-                task: {
-                    title: '曠野背誦試煉',
-                    desc: '全組齊聲背誦詩篇 23 篇第 1 節：「耶和華是我的牧者，我必不致缺乏。」',
-                    reward: 20
-                }
+            { id: 13, type: 'event', name: '試煉朗誦台', category: '機遇考驗', colorBand: 'from-rose-500 to-red-600', color: 'bg-rose-600 text-white', icon: 'fa-bolt',
+                task: { title: '詩篇背誦試煉', desc: '全組齊聲背誦詩篇 23 篇第 1 節：「耶和華是我的牧者，我必不致缺乏。」', reward: 20 }
             },
-            { 
-                id: 14, gridIndex: 13, type: 'quiz', name: '椅子 #14', category: '聖經問答', color: 'bg-blue-600', icon: 'fa-book-bible',
-                task: {
-                    title: '聖靈果子考驗',
-                    desc: '加拉太書中提到的「聖靈所結的果子」，請列舉出其中任意三個（如：仁愛、喜樂、和平...）。',
-                    reward: 20,
-                    options: ['仁愛、喜樂、和平', '金、銀、寶石', '信心、希望、力量'],
-                    correct: 0
-                }
+            { id: 14, type: 'quiz', name: '果子大考驗', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '聖靈果子考驗', desc: '加拉太書中提到的「聖靈所結的果子」，請列舉出其中任意三個（如：仁愛、喜樂、和平...）。', reward: 20, options: ['仁愛、喜樂、和平', '金、銀、寶石', '信心、希望、力量'], correct: 0 }
             },
-            { 
-                id: 15, gridIndex: 12, type: 'finish', name: '終點: 迦南美地', category: '終點', color: 'bg-yellow-600', icon: 'fa-crown',
-                task: {
-                    title: '抵達迦南美地 / 新天新地！',
-                    desc: '恭喜順利抵達終點！獲得榮耀終點大加分 +50 分！',
-                    reward: 50
-                }
+            { id: 15, type: 'finish', name: '迦南美地', category: '終點美地', colorBand: 'from-yellow-400 to-amber-600', color: 'bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black', icon: 'fa-crown',
+                task: { title: '抵達迦南美地！', desc: '恭喜順利抵達終點！獲得榮耀終點大加分 +50 分！', reward: 50 }
+            },
+            // EXTENDED TILES (FOR 20 & 24 TILES)
+            { id: 16, type: 'quiz', name: '智者問答堂', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '新約書卷考驗', desc: '請說出四福音書的名稱（馬太、馬可、路加、約翰）。', reward: 20, options: ['馬太、馬可、路加、約翰', '創世記、出埃及記、利未記、民數記', '羅馬書、哥林多、加拉太、以弗所'], correct: 0 }
+            },
+            { id: 17, type: 'action', name: '肢體舞台', category: '默契肢體', colorBand: 'from-emerald-500 to-teal-600', color: 'bg-emerald-600 text-white', icon: 'fa-masks-theater',
+                task: { title: '聖經人物：伊甸園的蛇與亞當', desc: '兩位組員前往中央舞台演繹蛇誘惑亞當吃禁果的情境！', reward: 30, hasTimer: true, timerVal: 30 }
+            },
+            { id: 18, type: 'share', name: '心靈分享台', category: '生命分享', colorBand: 'from-amber-500 to-orange-600', color: 'bg-amber-600 text-white', icon: 'fa-comments',
+                task: { title: '主內肢體關懷', desc: '請說出一件你可以為團契或弟兄姊妹作出的具體服侍或關懷。', reward: 25 }
+            },
+            { id: 19, type: 'event', name: '天降恩典', category: '機遇考驗', colorBand: 'from-rose-500 to-red-600', color: 'bg-rose-600 text-white', icon: 'fa-bolt',
+                task: { title: '主恩滿溢大加分', desc: '領受上帝無盡恩典，全組獲得 +20 分特別獎勵！', reward: 20 }
+            },
+            { id: 20, type: 'quiz', name: '福音知識庫', category: '聖經問答', colorBand: 'from-blue-500 to-indigo-600', color: 'bg-blue-600 text-white', icon: 'fa-book-bible',
+                task: { title: '保羅的書信', desc: '新約中寫下最多書信的使徒是哪一位？', reward: 20, options: ['彼得', '保羅', '約翰'], correct: 1 }
+            },
+            { id: 21, type: 'action', name: '團隊默契卡', category: '默契肢體', colorBand: 'from-emerald-500 to-teal-600', color: 'bg-emerald-600 text-white', icon: 'fa-masks-theater',
+                task: { title: '比劃遊戲：分紅海', desc: '兩位組員合作演繹「摩西舉杖分紅海」情境，限時 30 秒！', reward: 30, hasTimer: true, timerVal: 30 }
+            },
+            { id: 22, type: 'share', name: '感恩祈禱角', category: '生命分享', colorBand: 'from-amber-500 to-orange-600', color: 'bg-amber-600 text-white', icon: 'fa-comments',
+                task: { title: '同心合意禱告', desc: '全組組員一同開口說：「感謝神，讚美主！」獲得生命恩典分數！', reward: 25 }
+            },
+            { id: 23, type: 'event', name: '榮耀挑戰台', category: '機遇考驗', colorBand: 'from-purple-500 to-indigo-600', color: 'bg-purple-600 text-white', icon: 'fa-trophy',
+                task: { title: '榮耀衝刺獎勵', desc: '即將抵達終點！全組齊聲拍掌三下獲得 +30 分衝刺獎勵！', reward: 30 }
             }
         ];
 
+        let currentActiveChairs = [];
+
         // INITIALIZE GAME
         window.onload = function() {
-            renderBoardPath();
+            renderDiceDots(1);
+            setupTrackTiles(16);
             renderScoreboard();
             updateTurnUI();
             window.addEventListener('resize', drawPathSvgLines);
             addLog("🎮 遊戲已準備就緒！每組均有 1 次盲抽卡牌機會。");
         };
 
-        // Render Path Grid Nodes & SVG Connecting Lines
+        // SETUP TRACK TILES (16, 20, or 24)
+        function setupTrackTiles(count) {
+            totalTrackTiles = parseInt(count);
+            currentActiveChairs = MASTER_TASKS_POOL.slice(0, totalTrackTiles);
+            
+            // Adjust the finish node to be the last index
+            const lastIndex = totalTrackTiles - 1;
+            currentActiveChairs[lastIndex] = {
+                id: lastIndex,
+                type: 'finish',
+                name: '迦南美地',
+                category: '終點美地',
+                colorBand: 'from-yellow-400 to-amber-600',
+                color: 'bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-950 font-black',
+                icon: 'fa-crown',
+                task: { title: '抵達迦南美地！', desc: '恭喜順利抵達終點！獲得榮耀終點大加分 +50 分！', reward: 50 }
+            };
+
+            // Reset team positions if out of bounds
+            teams.forEach(t => {
+                if (t.position >= totalTrackTiles) t.position = totalTrackTiles - 1;
+            });
+
+            document.getElementById('currentTrackCountText').innerText = totalTrackTiles;
+            document.getElementById('footerTrackTotal').innerText = totalTrackTiles;
+            document.getElementById('footerTrackMax').innerText = totalTrackTiles - 1;
+
+            renderBoardPath();
+        }
+
+        function changeTrackLength(value) {
+            setupTrackTiles(value);
+            addLog(`🗺️ 賽道格數已更改為 ${value} 格！`);
+            renderScoreboard();
+            updateTurnUI();
+        }
+
+        // RENDER DICE DOTS (Pips Pattern for 1 to 4)
+        function renderDiceDots(value) {
+            const container = document.getElementById('diceFaceContent');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // 3x3 grid dot positions: 0 to 8
+            // 0 1 2
+            // 3 4 5
+            // 6 7 8
+            let activeIndices = [];
+            if (value === 1) activeIndices = [4];
+            else if (value === 2) activeIndices = [0, 8];
+            else if (value === 3) activeIndices = [0, 4, 8];
+            else if (value === 4) activeIndices = [0, 2, 6, 8];
+            else if (value === 5) activeIndices = [0, 2, 4, 6, 8];
+            else if (value === 6) activeIndices = [0, 2, 3, 5, 6, 8];
+
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'flex items-center justify-center';
+                if (activeIndices.includes(i)) {
+                    const dot = document.createElement('div');
+                    dot.className = 'dice-dot';
+                    cell.appendChild(dot);
+                }
+                container.appendChild(cell);
+            }
+        }
+
+        // RENDER MONOPOLY PATH BOARD
         function renderBoardPath() {
             const container = document.getElementById('pathNodesContainer');
             container.innerHTML = '';
 
-            for (let g = 0; g < 16; g++) {
-                const chair = boardChairs.find(c => c.gridIndex === g);
+            let cols = 4;
+            if (totalTrackTiles === 20) cols = 5;
+            if (totalTrackTiles === 24) cols = 6;
+
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+            container.style.gap = '10px';
+
+            for (let i = 0; i < totalTrackTiles; i++) {
+                const chair = currentActiveChairs[i];
                 const teamsOnChair = teams.filter(t => t.position === chair.id);
 
                 const node = document.createElement('div');
                 node.id = `path-node-${chair.id}`;
-                node.className = `p-2 rounded-xl border border-indigo-700/80 bg-indigo-950/80 hover:border-amber-400 cursor-pointer flex flex-col justify-between relative shadow-lg transition-transform hover:scale-105 select-none`;
+                node.className = `rounded-xl border-2 border-indigo-600/80 bg-slate-900/90 hover:border-amber-400 cursor-pointer flex flex-col justify-between relative shadow-lg transition-all hover:scale-105 select-none overflow-hidden`;
                 node.onclick = () => previewChairTask(chair.id);
 
                 node.innerHTML = `
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded text-white ${chair.color} font-bold shadow-sm">
-                            #${chair.id} ${chair.name.replace('椅子 #', '')}
-                        </span>
-                        <i class="fa-solid ${chair.icon} text-xs text-indigo-300"></i>
+                    <!-- Monopoly Property Top Color Bar -->
+                    <div class="property-header bg-gradient-to-r ${chair.colorBand} px-2 py-1 flex justify-between items-center text-white font-black text-xs border-b border-indigo-900">
+                        <span>#${chair.id}</span>
+                        <i class="fa-solid ${chair.icon} text-sm drop-shadow"></i>
                     </div>
-                    
-                    <div class="text-[11px] font-extrabold text-amber-200 truncate my-0.5 text-center">
-                        ${chair.category}
+
+                    <!-- Card Body Info -->
+                    <div class="p-2 flex-1 flex flex-col justify-center items-center text-center">
+                        <div class="text-xs sm:text-sm font-black text-amber-200 tracking-wide line-clamp-1">
+                            ${chair.name}
+                        </div>
+                        <div class="text-[11px] font-bold text-indigo-300 mt-0.5">
+                            ${chair.category}
+                        </div>
                     </div>
 
                     <!-- Team Avatars Container -->
-                    <div class="flex flex-wrap gap-1 justify-center items-center min-h-[22px] mt-1">
+                    <div class="p-1 bg-indigo-950/70 border-t border-indigo-800/80 flex flex-wrap gap-1 justify-center items-center min-h-[28px]">
                         ${teamsOnChair.map(t => `
-                            <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow ring-2 ring-white/90 animate-bounce" style="background-color: ${t.color}" title="${t.name}">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white shadow ring-2 ring-white animate-bounce" style="background-color: ${t.color}" title="${t.name}">
                                 ${t.name.substring(0,1)}
                             </span>
                         `).join('')}
@@ -721,7 +773,7 @@
             setTimeout(drawPathSvgLines, 100);
         }
 
-        // Draw SVG Connected Serpent Line between Chairs in order #0 -> #15
+        // Draw SVG Connected Serpent Line between Tiles
         function drawPathSvgLines() {
             const svg = document.getElementById('boardPathSvg');
             if (!svg) return;
@@ -730,7 +782,7 @@
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
             let d = "";
 
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < totalTrackTiles; i++) {
                 const nodeEl = document.getElementById(`path-node-${i}`);
                 if (!nodeEl) continue;
 
@@ -757,7 +809,7 @@
             svg.appendChild(path);
         }
 
-        // Render Leaderboard / Scores with Special Cards status
+        // RENDER SCOREBOARD
         function renderScoreboard() {
             const container = document.getElementById('teamsContainer');
             container.innerHTML = '';
@@ -767,33 +819,33 @@
                 const card = document.createElement('div');
                 card.className = `p-3 rounded-xl border transition flex items-center justify-between ${
                     isActive 
-                    ? 'bg-indigo-950 border-amber-400 ring-2 ring-amber-400/30' 
-                    : 'bg-indigo-950/40 border-indigo-800/80 opacity-80'
+                    ? 'bg-indigo-950 border-amber-400 ring-2 ring-amber-400/40 glow-active' 
+                    : 'bg-indigo-950/50 border-indigo-800/80 opacity-85'
                 }`;
 
                 const cardStatusText = t.cardUsed && t.specialCard 
                     ? `<span class="text-gray-500 line-through"><i class="fa-solid ${t.specialCard.icon}"></i> ${t.specialCard.name} (已用)</span>` 
-                    : `<span class="text-purple-300 font-semibold"><i class="fa-solid fa-circle-question"></i> 神秘卡牌 (未用)</span>`;
+                    : `<span class="text-purple-300 font-semibold"><i class="fa-solid fa-circle-question"></i> 特殊卡牌 (未用)</span>`;
 
                 card.innerHTML = `
                     <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow" style="background-color: ${t.color}">
-                            ${idx + 1}
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black text-white shadow ring-2 ring-white/30" style="background-color: ${t.color}">
+                            ${t.name.substring(0, 1)}
                         </div>
                         <div>
-                            <div class="text-xs font-extrabold text-white flex items-center gap-1.5">
+                            <div class="text-xs sm:text-sm font-black text-white flex items-center gap-1.5">
                                 ${t.name}
-                                ${isActive ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-1.5 py-0.2 rounded">當前</span>' : ''}
-                                ${t.isFrozen ? '<span class="text-[10px] bg-blue-500/30 text-blue-300 border border-blue-400 px-1 rounded">凍結</span>' : ''}
-                                ${t.isReversed ? '<span class="text-[10px] bg-rose-500/30 text-rose-300 border border-rose-400 px-1 rounded">倒退</span>' : ''}
+                                ${isActive ? '<span class="text-[10px] bg-amber-500/30 text-amber-300 border border-amber-400 px-1.5 py-0.2 rounded font-bold">當前回合</span>' : ''}
+                                ${t.isFrozen ? '<span class="text-[10px] bg-blue-500/40 text-blue-200 border border-blue-400 px-1 rounded font-bold">凍結</span>' : ''}
+                                ${t.isReversed ? '<span class="text-[10px] bg-rose-500/40 text-rose-200 border border-rose-400 px-1 rounded font-bold">倒退</span>' : ''}
                             </div>
                             <div class="text-[10px] text-gray-400 flex items-center gap-1">
-                                位置: #${t.position} | ${cardStatusText}
+                                格子: #${t.position} | ${cardStatusText}
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-base font-black text-amber-400 font-mono">
+                        <div class="text-lg font-black text-amber-400 font-mono">
                             ${t.score} <span class="text-[10px] text-gray-400 font-normal">分</span>
                         </div>
                     </div>
@@ -805,11 +857,11 @@
         function updateTurnUI() {
             const currentTeam = teams[currentTeamIndex];
             document.getElementById('currentTeamBadge').style.backgroundColor = currentTeam.color;
-            document.getElementById('currentTeamBadge').innerText = currentTeamIndex + 1;
+            document.getElementById('currentTeamBadge').innerText = currentTeam.name.substring(0, 1);
             document.getElementById('currentTeamName').innerText = currentTeam.name;
-            document.getElementById('currentTeamChairLabel').innerText = `椅子 #${currentTeam.position} (${boardChairs[currentTeam.position].category})`;
+            document.getElementById('currentTeamChairLabel').innerText = `格子 #${currentTeam.position} (${currentActiveChairs[currentTeam.position].category})`;
             
-            // Special Card UI Update (Blind Draw on click)
+            // Special Card UI
             const cardNameEl = document.getElementById('cardName');
             const cardIconEl = document.getElementById('cardIcon');
             const useBtn = document.getElementById('useCardBtn');
@@ -830,12 +882,86 @@
             renderScoreboard();
         }
 
-        // SPECIAL CARD MODAL HANDLERS (RANDOM GACHA DRAW)
+        // TEAM MANAGEMENT MODAL (2-10 TEAMS, EDIT NAMES)
+        function openTeamManageModal() {
+            renderTeamManageList();
+            document.getElementById('teamManageModal').classList.remove('hidden');
+        }
+
+        function closeTeamManageModal() {
+            document.getElementById('teamManageModal').classList.add('hidden');
+            renderScoreboard();
+            updateTurnUI();
+            renderBoardPath();
+        }
+
+        function renderTeamManageList() {
+            const list = document.getElementById('teamManageList');
+            list.innerHTML = '';
+
+            teams.forEach((t, idx) => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-2 bg-indigo-900/60 p-2.5 rounded-xl border border-indigo-700';
+                item.innerHTML = `
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center font-bold text-white text-xs shadow" style="background-color: ${t.color}">
+                        ${idx + 1}
+                    </div>
+                    <input type="text" value="${t.name}" onchange="updateTeamName(${t.id}, this.value)" class="bg-indigo-950 border border-indigo-600 rounded-lg px-3 py-1.5 text-xs text-white font-bold flex-1 outline-none focus:border-amber-400">
+                    <button onclick="removeTeamInManage(${t.id})" ${teams.length <= 2 ? 'disabled' : ''} class="px-2.5 py-1.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-lg text-xs font-bold transition disabled:opacity-30 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+
+            document.getElementById('addTeamBtn').disabled = teams.length >= 10;
+        }
+
+        function updateTeamName(teamId, newName) {
+            const team = teams.find(t => t.id === teamId);
+            if (team && newName.trim() !== '') {
+                team.name = newName.trim();
+            }
+        }
+
+        function addTeamInManage() {
+            if (teams.length >= 10) return;
+            const newId = teams.length > 0 ? Math.max(...teams.map(t => t.id)) + 1 : 0;
+            const newColor = TEAM_COLORS[teams.length % TEAM_COLORS.length];
+            const teamNamesList = ['信心隊', '盼望隊', '愛心隊', '喜樂隊', '和平隊', '忍耐隊', '恩慈隊', '良善隊', '信實隊', '溫柔隊'];
+            const name = teamNamesList[teams.length] || `隊伍 ${teams.length + 1}`;
+
+            teams.push({
+                id: newId,
+                name: name,
+                color: newColor,
+                position: 0,
+                score: 0,
+                specialCard: null,
+                cardUsed: false,
+                isFrozen: false,
+                isReversed: false
+            });
+
+            renderTeamManageList();
+            addLog(`➕ 新增了隊伍：「${name}」！`);
+        }
+
+        function removeTeamInManage(teamId) {
+            if (teams.length <= 2) return;
+            teams = teams.filter(t => t.id !== teamId);
+            if (currentTeamIndex >= teams.length) {
+                currentTeamIndex = 0;
+            }
+            renderTeamManageList();
+            addLog(`➖ 刪除了隊伍！目前共有 ${teams.length} 隊。`);
+        }
+
+        // SPECIAL CARD MODAL HANDLERS
         function openSpecialCardModal() {
             const currentTeam = teams[currentTeamIndex];
             if (currentTeam.cardUsed) return;
 
-            // Instantly draw 1 random card from SPECIAL_CARDS_POOL
             const randomIndex = Math.floor(Math.random() * SPECIAL_CARDS_POOL.length);
             pendingDrawnCard = SPECIAL_CARDS_POOL[randomIndex];
 
@@ -877,7 +1003,7 @@
                 inputContainer.innerHTML = `
                     <label class="block text-xs font-bold text-amber-300 mb-1">請選擇要發動技能的目標隊伍：</label>
                     <select id="cardSelectTeam" class="w-full bg-indigo-900 border border-indigo-700 rounded-xl p-2.5 text-sm text-white font-bold">
-                        ${otherTeams.map(t => `<option value="${t.id}">${t.name} (目前在椅子 #${t.position})</option>`).join('')}
+                        ${otherTeams.map(t => `<option value="${t.id}">${t.name} (目前在格子 #${t.position})</option>`).join('')}
                     </select>
                 `;
             }
@@ -908,12 +1034,14 @@
                 addLog(`✨ ${currentTeam.name} 盲抽獲得【${pendingDrawnCard.name}】，本次擲骰步數將翻倍！`);
             } else if (cardId === 'REVERSE_TARGET') {
                 const targetId = parseInt(document.getElementById('cardSelectTeam').value);
-                teams[targetId].isReversed = true;
-                addLog(`⚡ ${currentTeam.name} 盲抽獲得【${pendingDrawnCard.name}】，使「${teams[targetId].name}」下一回合倒退！`);
+                const targetTeam = teams.find(t => t.id === targetId);
+                if (targetTeam) targetTeam.isReversed = true;
+                addLog(`⚡ ${currentTeam.name} 盲抽獲得【${pendingDrawnCard.name}】，使「${targetTeam ? targetTeam.name : ''}」下一回合倒退！`);
             } else if (cardId === 'FREEZE_TARGET') {
                 const targetId = parseInt(document.getElementById('cardSelectTeam').value);
-                teams[targetId].isFrozen = true;
-                addLog(`❄️ ${currentTeam.name} 盲抽獲得【${pendingDrawnCard.name}】，使「${teams[targetId].name}」下一回合凍結暫停！`);
+                const targetTeam = teams.find(t => t.id === targetId);
+                if (targetTeam) targetTeam.isFrozen = true;
+                addLog(`❄️ ${currentTeam.name} 盲抽獲得【${pendingDrawnCard.name}】，使「${targetTeam ? targetTeam.name : ''}」下一回合凍結暫停！`);
             }
 
             pendingDrawnCard = null;
@@ -932,10 +1060,9 @@
 
             const team = teams[currentTeamIndex];
 
-            // If team was reversed by card
             const isReversedTurn = team.isReversed;
             if (isReversedTurn) {
-                team.isReversed = false; // reset after turn
+                team.isReversed = false;
             }
 
             const diceEl = document.getElementById('dice');
@@ -944,7 +1071,7 @@
 
             const interval = setInterval(() => {
                 const tempValue = Math.floor(Math.random() * 4) + 1;
-                diceEl.querySelector('.dice-face').innerText = tempValue;
+                renderDiceDots(tempValue);
                 
                 const rotX = Math.floor(Math.random() * 360);
                 const rotY = Math.floor(Math.random() * 360);
@@ -956,14 +1083,13 @@
                     
                     let baseDice = Math.floor(Math.random() * 4) + 1;
 
-                    // Apply Card Modifier if activated
                     if (activeCardModifier) {
                         if (activeCardModifier.type === 'SET_NUM') {
                             baseDice = activeCardModifier.value;
                         } else if (activeCardModifier.type === 'DOUBLE') {
                             baseDice = baseDice * 2;
                         }
-                        activeCardModifier = null; // reset
+                        activeCardModifier = null;
                     }
 
                     let finalSteps = baseDice;
@@ -972,26 +1098,26 @@
                     }
 
                     diceEl.style.transform = `rotateX(0deg) rotateY(0deg)`;
-                    diceEl.querySelector('.dice-face').innerText = Math.abs(finalSteps);
+                    renderDiceDots(Math.abs(finalSteps));
                     
                     moveCurrentTeam(finalSteps);
                 }
             }, 80);
         }
 
-        // Move Team Token Step by Step (Supports forward/backward)
+        // Move Team Token
         function moveCurrentTeam(steps) {
             const team = teams[currentTeamIndex];
             const oldPos = team.position;
             let targetPos = oldPos + steps;
 
             if (targetPos < 0) targetPos = 0;
-            if (targetPos >= boardChairs.length - 1) {
-                targetPos = boardChairs.length - 1; // Cap at Finish Canaan
+            if (targetPos >= totalTrackTiles - 1) {
+                targetPos = totalTrackTiles - 1;
             }
 
             const moveDirText = steps >= 0 ? `前進 ${steps} 步` : `倒退 ${Math.abs(steps)} 步`;
-            addLog(`🎲 ${team.name} ${moveDirText}！從椅子 #${oldPos} 移至 #${targetPos}。`);
+            addLog(`🎲 ${team.name} ${moveDirText}！從格子 #${oldPos} 移至 #${targetPos}。`);
 
             let currentStep = oldPos;
             const isForward = targetPos >= oldPos;
@@ -1007,10 +1133,10 @@
                     clearInterval(moveInterval);
                     isRolling = false;
                     
-                    // Update Runner Instruction
+                    // Update Stage Instruction
                     const runnerBox = document.getElementById('runnerInstruction');
-                    const runnerText = document.getElementById('runnerInstructionText');
-                    runnerText.innerHTML = `請 <strong>${team.name}</strong> 真人棋子步行至地面 <span class="text-amber-400 underline decoration-wavy">椅子 #${targetPos} (${boardChairs[targetPos].category})</span>`;
+                    const stageTeamName = document.getElementById('stageTeamName');
+                    stageTeamName.innerText = team.name;
                     runnerBox.classList.remove('hidden');
 
                     updateTurnUI();
@@ -1025,8 +1151,8 @@
 
         // TASK MODAL HANDLING
         function triggerChairTask(chairId) {
-            const chair = boardChairs[chairId];
-            if (!chair.task && chair.type !== 'finish') {
+            const chair = currentActiveChairs[chairId];
+            if (!chair || (!chair.task && chair.type !== 'finish')) {
                 enableNextTurn();
                 return;
             }
@@ -1046,7 +1172,7 @@
             timerContainer.classList.add('hidden');
             clearInterval(timerInterval);
 
-            catBadge.className = `inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold text-white ${chair.color}`;
+            catBadge.className = `inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold ${chair.color}`;
             catName.innerText = chair.category;
             chairNum.innerText = `#${chair.id}`;
             title.innerText = chair.task.title;
@@ -1108,7 +1234,7 @@
             renderScoreboard();
             enableNextTurn();
 
-            if (team.position >= boardChairs.length - 1) {
+            if (team.position >= totalTrackTiles - 1) {
                 triggerVictory();
             }
         }
@@ -1159,8 +1285,8 @@
 
         // PREVIEW TASK
         function previewChairTask(chairId) {
-            const chair = boardChairs[chairId];
-            if (!chair.task) return;
+            const chair = currentActiveChairs[chairId];
+            if (!chair || !chair.task) return;
             alert(`【${chair.name} - ${chair.category}】\n\n題目: ${chair.task.title}\n描述: ${chair.task.desc}\n獎勵: +${chair.task.reward} 分`);
         }
 
@@ -1193,7 +1319,10 @@
         }
 
         function adjustScore(teamId, delta) {
-            teams[teamId].score = Math.max(0, teams[teamId].score + delta);
+            const team = teams.find(t => t.id === teamId);
+            if (team) {
+                team.score = Math.max(0, team.score + delta);
+            }
             renderScoreboard();
             openScoreAdjustModal();
         }
@@ -1239,7 +1368,7 @@
                 div.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-bold text-amber-400">#${i+1}</span>
-                        <span class="text-xs text-white" style="color:${t.color}">${t.name}</span>
+                        <span class="text-xs text-white font-bold" style="color:${t.color}">${t.name}</span>
                     </div>
                     <span class="font-mono text-sm font-bold text-amber-300">${t.score} 分</span>
                 `;
